@@ -5,6 +5,7 @@ const authRoutes = require('./routes/authRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const normalUserRoutes = require('./routes/userDetailRoutes');
 const columnRoutes = require('./routes/columnRoutes');
+const contactRoutes = require('./routes/contactRoutes');
 const app = express();
 
 // 使用 dotenv 来加载环境变量
@@ -19,6 +20,7 @@ app.use('/api', eventRoutes);
 app.use('/api', normalUserRoutes);
 app.use('/api', columnRoutes);
 app.use('/uploads', express.static('uploads'));
+app.use('/api', contactRoutes);
 
 // 使用环境变量连接 MongoDB
 mongoose.connect(process.env.MONGO_URI, { 

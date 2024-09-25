@@ -10,7 +10,7 @@ const eventSchema = new Schema({
   endTime: { type: String, required: true },  // 结束时间
   location: { type: String, required: true },
   capacity: { type: Number, default: '' },
-  level: { type: String, required: true },
+  level: { type: String, default: ''},
   isFree: { type: Boolean, required: true },
   reserve: { type: Boolean, default: false },//是否需要预约
   repeat: { type: Boolean, default: false },  //是否每周重复字段

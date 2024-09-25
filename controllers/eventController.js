@@ -143,7 +143,7 @@ exports.createEvent = async (req, res) => {
     const { title, startdate,enddate, startTime, endTime, location, capacity, level, isFree,reserve, repeat, organizer,description,category} = req.body;
     console.log( req.body);
     // 检查必填字段
-    if (!title || !startdate ||!enddate|| !startTime || !endTime || !location || capacity === undefined || !level) {
+    if (!title || !startdate ||!enddate|| !startTime || !endTime || !location) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
     let day='';
