@@ -11,7 +11,7 @@ exports.getAllEvents = async (req, res) => {
   try {
     const events = await Event.find({
       $or: [
-        { startdate: { $gte: currentDate } },  // Date is greater than or equal to today
+        { enddate: { $gte: currentDate } },  // Date is greater than or equal to today
         { repeat: true }             // Or, repeat is true
       ]
     });
@@ -41,7 +41,7 @@ exports.getAllEventsByEmail = async (req, res) => {
     const events = await Event.find({
      email: email ,
      $or: [
-        { startdate: { $gte: currentDate } },  // Date is greater than or equal to today
+        { enddate: { $gte: currentDate } },  // Date is greater than or equal to today
         { repeat: true }            // Or, repeat is true
       ]
     });
