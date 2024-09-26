@@ -1,3 +1,6 @@
+// 使用 dotenv 来加载环境变量
+require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -7,9 +10,6 @@ const normalUserRoutes = require('./routes/userDetailRoutes');
 const columnRoutes = require('./routes/columnRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const app = express();
-
-// 使用 dotenv 来加载环境变量
-require('dotenv').config();
 
 app.use(cors());
 app.use(express.json()); 

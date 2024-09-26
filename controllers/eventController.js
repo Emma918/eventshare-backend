@@ -1,8 +1,7 @@
 const Event = require('../models/Event.js');
 const Image = require('../models/Image.js');
 const Column = require('../models/Column.js');
-const fs = require('fs');
-const path = require('path');
+const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const Reservation = require('../models/Reservation.js');
 const Counter = require('../models/Counter.js'); 
 const { getDayOfWeek, getCurrentDate,getWeekdayNumber,formatDate}  = require('../routes/dateUtils.js'); 
@@ -14,6 +13,36 @@ exports.getAllEvents = async (req, res) => {
       $or: [
         { startdate: { $gte: currentDate } },  // Date is greater than or equal to today
         { repeat: true }             // Or, repeat is true
+      ]
+    });
+    const eventsWithImages = await Promise.all(events.map(async (event) => {//查找对应的图片信息
+      const images = await Image.find({ eventId: event.eventId });
+      const column= await Column.findOne({  
+        $and: [{columnName:'English Level'}, { columnSeq:event.level }]
+      });
+      const levelname= column.columnDetail;
+      return {
+        ...event.toObject(),
+        levelname,
+        images: images.map(image => ({
+          imagePath: image.imagePath,
+        }))
+      };
+    }));
+    res.json(eventsWithImages);
+  } catch (err) {
+    console.error('Error finding events:', err);
+  }
+};
+exports.getAllEventsByEmail = async (req, res) => {
+  const {email} = req.params;
+  const currentDate = getCurrentDate();  // Get current date in YYYY-MM-DD format
+  try {
+    const events = await Event.find({
+     email: email ,
+     $or: [
+        { startdate: { $gte: currentDate } },  // Date is greater than or equal to today
+        { repeat: true }            // Or, repeat is true
       ]
     });
     const eventsWithImages = await Promise.all(events.map(async (event) => {//查找对应的图片信息
@@ -140,10 +169,10 @@ const getNextSequence = async (name) => {
 
 // 创建新活动
 exports.createEvent = async (req, res) => {
-    const { title, startdate,enddate, startTime, endTime, location, capacity, level, isFree,reserve, repeat, organizer,description,category} = req.body;
+    const {email, title, startdate,enddate, startTime, endTime, location, capacity, level, isFree,reserve, repeat, organizer,description,category} = req.body;
     console.log( req.body);
     // 检查必填字段
-    if (!title || !startdate ||!enddate|| !startTime || !endTime || !location) {
+    if (!email || !title || !startdate ||!enddate|| !startTime || !endTime || !location) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
     let day='';
@@ -156,6 +185,7 @@ exports.createEvent = async (req, res) => {
     console.log('Next eventId:', eventIdnew);
     const event = new Event({
         eventId: eventIdnew,
+        email,
         title,
         startdate,          // 保存日期
         enddate,
@@ -179,7 +209,7 @@ exports.createEvent = async (req, res) => {
     if (req.files && req.files.length > 0) {
       const imageRecords = req.files.map(file => ({
         eventId: newEvent.eventId,
-        imagePath: file.path,
+        imagePath: file.location,
       }));
       await Image.insertMany(imageRecords);
     }
@@ -192,7 +222,7 @@ exports.createEvent = async (req, res) => {
 // 更新活动
 exports.updateEvent = async (req, res) => {
   const { eventId } = req.params;
-  const { title, startdate,enddate, startTime, endTime, location, capacity, level, isFree,reserve, repeat,organizer,description,category} = req.body;
+  const {email, title, startdate,enddate, startTime, endTime, location, capacity, level, isFree,reserve, repeat,organizer,description,category} = req.body;
   // 检查必填字段
   if (!title || !startdate||!enddate || !startTime || !endTime || !location || capacity === undefined || !level) {
     return res.status(400).json({ message: 'Missing required fields' });
@@ -205,7 +235,7 @@ exports.updateEvent = async (req, res) => {
     // 查找并更新活动
     const event = await Event.findOneAndUpdate(
       { eventId },
-      {
+      { email,
         title,
         startdate,          // 更新日期
         enddate,
@@ -227,7 +257,7 @@ exports.updateEvent = async (req, res) => {
     if (req.files && req.files.length > 0) {
       const imageRecords = req.files.map(file => ({
         eventId: eventId,
-        imagePath: file.path,
+        imagePath: file.location,
       }));
       await Image.insertMany(imageRecords);
     }
@@ -364,41 +394,41 @@ exports.cancelReservation = async (req, res) => {
     res.status(500).json({ message: 'Error cancelling reservation', error });
   }
 };
+// 创建 S3 客户端
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
 exports.deleteImageByEventIdAndPath = async (req, res) => {
   const { eventId } = req.params;
   const { imagePath } = req.query;
+
   if (!imagePath) {
     return res.status(400).json({ message: 'Invalid image path' });
   }
 
-  // Replace backslashes with forward slashes
-  const imagePathnew = imagePath.replace( '/','\\');
   try {
-    // Remove the image record from the database
-    const imageRecord = await Image.findOneAndDelete({ eventId: eventId, imagePath: imagePathnew });
-
+    // 从数据库中删除图片记录
+    const imageRecord = await Image.findOneAndDelete({ eventId: eventId, imagePath: imagePath });
     if (!imageRecord) {
       return res.status(404).json({ message: 'Image not found' });
     }
 
-    // Resolve the absolute path for the image
-    const absoluteImagePath = path.resolve(imagePathnew);
+    // 创建 S3 删除命令
+    const params = {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: imagePath,  // S3 中的文件路径
+    };
 
-    // Check if the file exists before attempting to delete it
-    fs.access(absoluteImagePath, fs.constants.F_OK, (err) => {
-      if (err) {
-        console.error(`File at ${absoluteImagePath} does not exist:`, err);
-      } else {
-        // File exists, delete it
-        fs.unlink(absoluteImagePath, (err) => {
-          if (err) {
-            console.error(`Error deleting file at ${absoluteImagePath}:`, err);
-          } 
-        });
-      }
-    });
+    const command = new DeleteObjectCommand(params);
 
-    res.status(200).json({ message: 'Image deleted successfully' });
+    // 执行 S3 删除操作
+    await s3.send(command);
+    res.status(200).json({ message: 'Image deleted successfully from S3' });
   } catch (err) {
     console.error('Error deleting image:', err);
     res.status(500).json({ message: err.message });

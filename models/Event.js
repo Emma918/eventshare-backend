@@ -3,6 +3,7 @@ const { Schema } = mongoose;
 
 const eventSchema = new Schema({
   eventId: { type: Number, required: true, unique: true },  // 自增ID
+  email: { type: String, required: true },//创建者email
   title: { type: String, required: true },
   startdate: { type: String, required: true },  //日期
   enddate: { type: String, required: true },  //日期
