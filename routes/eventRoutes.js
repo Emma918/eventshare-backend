@@ -8,7 +8,7 @@ const eventController = require('../controllers/eventController');
 // 获取所有活动
 router.get('/events', eventController.getAllEvents);
 // 根据Email获取该用户创建的活动
-router.get('/events/:email', eventController.getAllEventsByEmail);
+router.get('/events/email/:email', eventController.getAllEventsByEmail);
 // 获取单个活动的详情
 router.get('/events/:eventId', eventController.getEventByID);
 // 获取活动的所有有效日期

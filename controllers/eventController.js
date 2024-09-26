@@ -89,6 +89,7 @@ exports.getEventByID = async (req, res) => {
     console.error('Error finding events:', err);
   }
 };
+
 const getReservationCount = async (eventId, date) => {
   try {
     const count = await Reservation.countDocuments({
