@@ -11,7 +11,7 @@ const columnRoutes = require('./routes/columnRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const app = express();
 
-const allowedOrigins = ['https://eventshare-front-zhennan-yangs-projects.vercel.app'];
+const allowedOrigins = ['https://kiwiboard.info'];
 
 app.use(cors({
   origin: function (origin, callback) {
