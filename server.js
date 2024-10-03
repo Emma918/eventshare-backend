@@ -21,7 +21,13 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,  // 如果您的请求需要携带 cookies 或其他认证信息
 }));
+
+// 处理预检请求
+app.options('*', cors());
 app.use(express.json()); 
 
 // 路由等设置
