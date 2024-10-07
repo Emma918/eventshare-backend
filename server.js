@@ -11,7 +11,23 @@ const columnRoutes = require('./routes/columnRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const app = express();
 
-app.use(cors());
+const allowedOrigins = ['https://kiwiboard.info'];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,  // 如果您的请求需要携带 cookies 或其他认证信息
+}));
+
+// 处理预检请求
+app.options('*', cors());
 app.use(express.json()); 
 
 // 路由等设置
