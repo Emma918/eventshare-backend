@@ -8,6 +8,7 @@ const { getDayOfWeek, getCurrentDate,getWeekdayNumber,formatDate}  = require('..
 // 获取所有活动
 exports.getAllEvents = async (req, res) => {
   const currentDate = getCurrentDate();  // Get current date in YYYY-MM-DD format
+  const userId = req.query.userId; 
   try {
     const events = await Event.find({
       $or: [
@@ -26,10 +27,12 @@ exports.getAllEvents = async (req, res) => {
         levelname,
         images: images.map(image => ({
           imagePath: image.imagePath,
-        }))
+        })),
+        liked: event.likedBy.includes(userId)
       };
     }));
     res.json(eventsWithImages);
+
   } catch (err) {
     console.error('Error finding events:', err);
   }
@@ -67,6 +70,7 @@ exports.getAllEventsByEmail = async (req, res) => {
 //获取单个活动的详情
 exports.getEventByID = async (req, res) => {
   const {eventId} = req.params;
+  const userId = req.query.userId; 
   try {
     const event = await Event.findOne({ eventId: eventId });
     if (!event) {
@@ -82,7 +86,8 @@ exports.getEventByID = async (req, res) => {
         levelname,
         images: images.map(image => ({
           imagePath: image.imagePath,
-        }))
+        })),
+        liked: event.likedBy.includes(userId)
       };
     res.json(eventWithImages);
   } catch (err) {
@@ -171,7 +176,6 @@ const getNextSequence = async (name) => {
 // 创建新活动
 exports.createEvent = async (req, res) => {
     const {email, title, startdate,enddate, startTime, endTime, location, capacity, level, isFree,reserve, repeat, organizer,description,category} = req.body;
-    console.log( req.body);
     // 检查必填字段
     if (!email || !title || !startdate ||!enddate|| !startTime || !endTime || !location) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -183,7 +187,6 @@ exports.createEvent = async (req, res) => {
     }
  // 获取自增的活动ID
     const eventIdnew = await getNextSequence('eventId');
-    console.log('Next eventId:', eventIdnew);
     const event = new Event({
         eventId: eventIdnew,
         email,
@@ -205,7 +208,6 @@ exports.createEvent = async (req, res) => {
       });
 
   try {
-    console.log('event',event);
     const newEvent = await event.save();
     if (req.files && req.files.length > 0) {
       const imageRecords = req.files.map(file => ({
@@ -433,5 +435,34 @@ exports.deleteImageByEventIdAndPath = async (req, res) => {
   } catch (err) {
     console.error('Error deleting image:', err);
     res.status(500).json({ message: err.message });
+  }
+};
+exports.eventLike = async (req, res) => {
+  const eventId = req.params.id;
+  const userId = req.body.userId;  // Assuming the user ID is sent in the request body
+  
+  try {
+    const event = await Event.findOne({ eventId });
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Check if the user has already liked the event
+    if (event.likedBy.includes(userId)) {
+      // User is unliking the event
+      event.likes -= 1;
+      event.likedBy = event.likedBy.filter(id => id !== userId);
+    } else {
+      // User is liking the event
+      event.likes += 1;
+      event.likedBy.push(userId);
+    }
+
+    await event.save();
+    res.json({ likes: event.likes, liked: event.likedBy.includes(userId) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };

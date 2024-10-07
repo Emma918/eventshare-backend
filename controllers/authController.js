@@ -3,16 +3,14 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User.js');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-
+const transporter = nodemailer.createTransport({
+  service: 'Gmail', 
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 const sendResetEmail = async (email, resetToken) => {
-  const transporter = nodemailer.createTransport({
-    service: 'Gmail', 
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -24,6 +22,78 @@ const sendResetEmail = async (email, resetToken) => {
 };
 const generateResetToken = () => {
   return crypto.randomBytes(32).toString('hex'); // Generates a 64-character hexadecimal string
+};
+exports.register = async (req, res) => { 
+  const { email, password, role } = req.body;
+
+  if (!email || !password || !role) {
+    return res.status(400).json({ message: 'Please fill in all fields' });
+  }
+  try {
+    // 检查用户是否存在
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // 加密密码
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 创建新用户
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+      role
+    });
+    // 保存用户
+    const savedUser = await newUser.save();
+     // Generate a token for email verification
+     const token = jwt.sign({ id: savedUser._id }, 'secret', { expiresIn: '1h' });
+
+     // Send verification email
+     const verificationUrl = `${process.env.BASE_URL}/auth/verify-email?token=${token}`;
+     await transporter.sendMail({
+       to: email,
+       subject: 'Email Verification',
+       html: `<p>Click the link below to verify your email:</p>
+              <a href="${verificationUrl}">${verificationUrl}</a>`
+     });
+ 
+    res.status(201).json({ message: 'Registration successful! Please verify your email.' });
+  } catch (error) {
+    console.error('Error registering user:', error);
+    res.status(500).json({ message: 'Registration failed. Please try again.' });
+  }
+  };
+exports.login = async (req, res) => {
+  const { email, password} = req.body;  // 接收前端的角色信息
+
+  // 检查是否提供了所有字段
+  if (!email || !password) {
+    return res.status(400).json({ msg: 'Please fill in all fields' });
+  }
+
+  try {
+    // 查找用户，确保邮箱匹配
+    const user = await User.findOne({ email});
+    if (!user) return res.status(400).json({ msg: 'User not found.' });
+    // Check if the user's email is verified
+    if (!user.verified) {
+      return res.status(400).json({ message: 'Please verify your email before logging in.' });
+   }
+
+    // 验证密码
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials.' });
+
+    // 生成 JWT 令牌
+    const token = jwt.sign({ id: user._id, role: user.role }, 'secret', { expiresIn: '1h' });
+
+    res.json({ token,role: user.role,userId:user._id });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ msg: 'Login failed. Please try again.' });
+  }
 };
 exports.sendPasswordResetEmail = async (req, res) => {
     const { email } = req.body;
@@ -50,9 +120,6 @@ exports.sendPasswordResetEmail = async (req, res) => {
   };
   exports.resetPassword = async (req, res) => {
     const { token, password } = req.body;
-    console.log('token',token);
-    console.log('newPassword',password);
-    console.log('Date.now()',Date.now());
     try {
       // Find the user by reset token and check if token has expired
       const user = await User.findOne({
@@ -68,7 +135,7 @@ exports.sendPasswordResetEmail = async (req, res) => {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
   
-            // Update user's password
+      // Update user's password
       user.password = hashedPassword;
 
       user.resetToken = undefined; // Clear the reset token
@@ -110,32 +177,6 @@ exports.sendPasswordResetEmail = async (req, res) => {
       res.status(500).json({ msg: 'Server error. Please try again later.' });
     }
   };
-  exports.login = async (req, res) => {
-    const { email, password, role } = req.body;  // 接收前端的角色信息
-  
-    // 检查是否提供了所有字段
-    if (!email || !password || !role) {
-      return res.status(400).json({ msg: 'Please fill in all fields' });
-    }
-  
-    try {
-      // 查找用户，确保邮箱和身份匹配
-      const user = await User.findOne({ email, role });
-      if (!user) return res.status(400).json({ msg: 'User not found or role mismatch.' });
-  
-      // 验证密码
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials.' });
-  
-      // 生成 JWT 令牌
-      const token = jwt.sign({ id: user._id, role: user.role }, 'secret', { expiresIn: '1h' });
-  
-      res.json({ token, role: user.role });
-    } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ msg: 'Login failed. Please try again.' });
-    }
-  };
   exports.getPasswordReset = async (req, res) => {
     const { token } = req.query;
     if (!token) {
@@ -144,34 +185,24 @@ exports.sendPasswordResetEmail = async (req, res) => {
   
     res.render('reset-password', { token });
   };
-
-const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);  
-exports.googleLogin = async (req, res) => {
-  const { token } = req.body;
-  try {
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    const { sub, email, name } = payload;
-
-    // 检查用户是否已经存在或创建新的用户
-    let user = await User.findOne({ googleId: sub });
-    if (!user) {
-      user = new User({
-        googleId: sub,
-        email: email,
-        name: name,
-        role: 'normal', // 默认角色
-      });
-      await user.save();
+  //verify email
+  exports.verifyemail = async (req, res) => {
+    const { token } = req.query;
+  
+    try {
+      // Verify the token
+      const decoded = jwt.verify(token, 'secret');
+      const userId = decoded.id;
+  
+      // Mark the user as verified
+      const user = await User.findByIdAndUpdate(userId, { verified: true });
+      if (!user) {
+        return res.status(400).json({ message: 'User not found' });
+      }
+  
+      res.status(200).json({ message: 'Email verified successfully! You can now log in.' });
+    } catch (error) {
+      console.error('Error verifying email:', error);
+      res.status(400).json({ message: 'Invalid or expired token.' });
     }
-
-    res.json({ email: user.email, role: user.role });
-  } catch (error) {
-    res.status(400).json({ message: 'Invalid token' });
-  }
-};
+  };

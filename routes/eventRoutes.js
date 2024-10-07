@@ -58,4 +58,7 @@ router.get('/user/reserved-events/:email', eventController.getUserReservedEvents
 
 //用户取消活动预约
 router.delete('/events/reserve/:eventId', eventController.cancelReservation);
+
+//event like
+router.post('/events/:id/like',eventController.eventLike);
 module.exports = router;
