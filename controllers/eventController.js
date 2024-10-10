@@ -15,7 +15,7 @@ exports.getAllEvents = async (req, res) => {
         { enddate: { $gte: currentDate } },  // Date is greater than or equal to today
         { repeat: true }             // Or, repeat is true
       ]
-    });
+    }).sort({ startdate: 1 },{ startTime: 1 });
     const eventsWithImages = await Promise.all(events.map(async (event) => {//查找对应的图片信息
       const images = await Image.find({ eventId: event.eventId });
       const column= await Column.findOne({  
