@@ -11,8 +11,8 @@ const columnRoutes = require('./routes/columnRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const app = express();
 
-//const allowedOrigins = ['https://kiwiboard.info'];
-const allowedOrigins = ['http://localhost:3000'];
+const allowedOrigins = ['https://kiwiboard.info'];
+//const allowedOrigins = ['http://localhost:3000'];
 app.use(cors({
   origin: function (origin, callback) {
     if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
