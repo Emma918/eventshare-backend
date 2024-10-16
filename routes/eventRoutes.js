@@ -41,8 +41,6 @@ router.post('/events', upload.array('images', 5), eventController.createEvent);
 
 // 删除活动及关联预约
 router.delete('/events/:eventId', eventController.deleteEvent);
-// 删除活动相关图片
-router.delete('/eventImage/:eventId', eventController.deleteImageByEventIdAndPath);
 
 // 更新活动
 router.put('/events/:eventId',upload.array('images', 5), eventController.updateEvent);

@@ -200,7 +200,8 @@ exports.sendPasswordResetEmail = async (req, res) => {
         return res.status(400).json({ message: 'User not found' });
       }
   
-      res.status(200).json({ message: 'Email verified successfully! You can now log in.' });
+       // Redirect to login page with a success message
+    res.redirect(`${process.env.FRONTEND_URL}/login?verified=success`);
     } catch (error) {
       console.error('Error verifying email:', error);
       res.status(400).json({ message: 'Invalid or expired token.' });

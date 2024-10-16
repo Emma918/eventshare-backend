@@ -7,6 +7,7 @@ const eventSchema = new Schema({
   title: { type: String, required: true },
   startdate: { type: String, required: true },  //日期
   enddate: { type: String, required: true },  //日期
+  dates: [{ type: String }],//event具体dates 主要用于爬取的event信息存储
   startTime: { type: String, required: true },  // 开始时间
   endTime: { type: String, required: true },  // 结束时间
   location: { type: String, required: true },
@@ -18,9 +19,11 @@ const eventSchema = new Schema({
   organizer: { type: String,default: ''},//一般为church名称
   weekday: { type: String,default: ''},//如果每周重复，则根据登录时的日期设置每周的周几重复
   description: { type: String }, // Save text description
-  category: { type: Number,required: true },//english learning or other events
+  category: [{ type: Number,required: true }],//english learning or other events
   likes: { type: Number, default: 0 },  // Number of likes for the event
   likedBy: [{ type: String }],  // Array of users (could be user IDs or emails) who liked the event
+  images: [{ type: String }],
+  link: { type: String, default: ''},//详情link 主要用于爬取的event信息存储
 });
 
 const Event = mongoose.model('Event', eventSchema);

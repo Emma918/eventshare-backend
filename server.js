@@ -1,6 +1,6 @@
 // 使用 dotenv 来加载环境变量
 require('dotenv').config();
-
+const connectDB = require('./utils/db'); // 连接数据库
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -39,12 +39,7 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api', contactRoutes);
 
 // 使用环境变量连接 MongoDB
-mongoose.connect(process.env.MONGO_URI, { 
-    useNewUrlParser: true, 
-    useUnifiedTopology: true 
-})
-.then(() => console.log('Database connected'))
-.catch(err => console.log('Database connection error:', err));
+connectDB(); // 连接数据库
 
 const port = process.env.PORT || 5000;
 
