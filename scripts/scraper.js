@@ -54,11 +54,10 @@ const getNextSequence = async () => {
             eventElements.forEach((event) => {
                 const title = event.querySelector('.article-tile__title a')?.innerText.trim();
                 const date = event.querySelector('.article-tile__date')?.innerText.trim();
-                const description = event.querySelector('p')?.innerText.trim();
                 const link = event.querySelector('.article-tile__title a')?.href;
                 const imageSrc = event.querySelector('img')?.src;
 
-                eventList.push({ title, date, description, link, imageSrc });
+                eventList.push({ title, date, link, imageSrc });
             });
 
             return eventList;
@@ -95,6 +94,7 @@ const getNextSequence = async () => {
             let isFree = false;
             let tags = [];
             let dates = [];
+            let description = '';
             const dateRegex = /\b(\d{1,2}\s\w+\s\d{4})\b/g;
             // 检查是否存在 Where 和 When 元素
             const whereHeader = Array.from(document.querySelectorAll('.event-panel__group h3.small'))
@@ -104,7 +104,7 @@ const getNextSequence = async () => {
             const costHeader = Array.from(document.querySelectorAll('.event-panel__group h3.small'))
                 .find(header => header.textContent.trim().toUpperCase() === 'COST');
             const tagsElements = document.querySelectorAll('.event-panel-tags__item .event-panel-tags__link');
-
+            const articleElement = document.querySelector('article');
             if (whereHeader) {
                 location = whereHeader.nextElementSibling?.innerText.trim() || null;
             }
@@ -137,7 +137,10 @@ const getNextSequence = async () => {
                     .trim();              // 修剪首尾空格;
                 tags.push(tagText);
             });
-            return { location, startTime, endTime, isFree, tags, dates };
+            if (articleElement) {
+                description = articleElement.innerHTML;
+            }
+            return { location, startTime, endTime, isFree, tags, dates,description };
         });
         // 匹配 tags 中的每个标签到数据库中的 columnSeq
         const tagsWithColumnSeq = await Promise.all(
@@ -171,7 +174,7 @@ const getNextSequence = async () => {
                 startTime: startTime24,
                 endTime: endTime24,
                 location: details.location,
-                description,
+                description: details.description,
                 category: validTags, // 存储标签为 category
                 isFree: details.isFree, // 设置是否免费
                 link,
