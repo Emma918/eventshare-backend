@@ -16,6 +16,15 @@ const getCurrentDate = () => {
   
   return `${year}-${month}-${day}`; // 返回 YYYY-MM-DD 格式的日期
 };
+const getDate = (dateString) => {
+
+// 分解日期字符串
+const [day, monthStr, year] = dateString.split(' ');
+const month = new Date(`${monthStr} 1`).getMonth(); // 将月字符串转换为月份数字
+
+// 创建 Date 对象，并确保时分秒为 0，时区为 UTC
+return new Date(Date.UTC(parseInt(year), month, parseInt(day)));
+};
 const getWeekdayNumber = (weekdayName) => {
   const daysOfWeek = {
     'Sunday': 0,
@@ -42,4 +51,5 @@ module.exports = {
   getCurrentDate,
   getWeekdayNumber,
   formatDate,
+  getDate,
 };

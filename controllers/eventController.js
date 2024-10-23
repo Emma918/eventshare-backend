@@ -3,10 +3,15 @@ const Column = require('../models/Column.js');
 const { S3Client, DeleteObjectsCommand } = require('@aws-sdk/client-s3');
 const Reservation = require('../models/Reservation.js');
 const { getDayOfWeek, getCurrentDate, getWeekdayNumber, formatDate } = require('../utils/dateUtils.js');
+// 格式化日期函数
+const formatNewDate = (date) => {
+  return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
 // 获取所有活动
 exports.getAllEvents = async (req, res) => {
-  const currentDate = getCurrentDate();  // Get current date in YYYY-MM-DD format
+  const currentDate = new Date(getCurrentDate());  // Get current date in YYYY-MM-DD format
   const userId = req.query.userId;
+
   try {
     const events = await Event.find({
       $or: [
@@ -14,13 +19,16 @@ exports.getAllEvents = async (req, res) => {
         { repeat: true }             // Or, repeat is true
       ]
     }).sort({ startdate: 1 }, { startTime: 1 });
+    console.log(events.length);
     const eventsWithImages = await Promise.all(events.map(async (event) => {//查找对应的图片信息
       const column = await Column.findOne({
         $and: [{ columnName: 'English Level' }, { columnSeq: event.level }]
       });
-      const levelname =  column?.columnDetail || '';
+      const levelname = column?.columnDetail || '';
       return {
         ...event.toObject(),
+        startdate: formatNewDate(event.startdate),
+        enddate: formatNewDate(event.enddate),
         levelname,
         liked: event.likedBy.includes(userId)
       };
@@ -46,9 +54,11 @@ exports.getAllEventsByEmail = async (req, res) => {
       const column = await Column.findOne({
         $and: [{ columnName: 'English Level' }, { columnSeq: event.level }]
       });
-      const levelname =  column?.columnDetail || '';
+      const levelname = column?.columnDetail || '';
       return {
         ...event.toObject(),
+        startdate: formatNewDate(event.startdate),
+        enddate: formatNewDate(event.enddate),
         levelname,
       };
     }));
@@ -72,6 +82,8 @@ exports.getEventByID = async (req, res) => {
     const levelname = column?.columnDetail || '';
     const eventWithImages = {
       ...event.toObject(),
+      startdate: formatNewDate(event.startdate),
+      enddate: formatNewDate(event.enddate),
       levelname,
       liked: event.likedBy.includes(userId)
     };

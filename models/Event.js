@@ -5,8 +5,8 @@ const eventSchema = new Schema({
   eventId: { type: Number, required: true, unique: true },  // 自增ID
   email: { type: String, required: true },//创建者email
   title: { type: String, required: true },
-  startdate: { type: String, required: true },  //日期
-  enddate: { type: String, required: true },  //日期
+  startdate: { type: Date, required: true },  //日期
+  enddate: { type: Date, required: true },  //日期
   dates: [{ type: String }],//event具体dates 主要用于爬取的event信息存储
   startTime: { type: String, required: true },  // 开始时间
   endTime: { type: String, required: true },  // 结束时间

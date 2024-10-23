@@ -4,7 +4,7 @@ const connectDB = require('../utils/db'); // 连接数据库
 const Event = require('../models/Event'); // 导入 Event 模型
 const Column = require('../models/Column');
 const fs = require('fs'); // 用于写文件
-
+const {getDate } = require('../utils/dateUtils.js');
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function convertTo24Hour(timeStr) {
     // 使用正则表达式解析时间字符串，例如 '8:30pm' 或 '8.30pm'
@@ -168,8 +168,8 @@ const getNextSequence = async () => {
                 eventId: await getNextSequence(),
                 email: 'kiwiboard.info@gmail.com',
                 title,
-                startdate: date.split(' - ')[0],
-                enddate: date.split(' - ')[1] || date.split(' - ')[0],
+                startdate: getDate(date.split(' - ')[0]),
+                enddate:getDate(date.split(' - ')[1] || date.split(' - ')[0]),
                 dates: details.dates,
                 startTime: startTime24,
                 endTime: endTime24,
